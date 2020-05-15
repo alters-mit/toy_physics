@@ -136,7 +136,7 @@ class PhysicsDataset(Controller):
             # Get a random position.
             o_pos = self._get_object_position(object_positions=object_positions)
             # Add the object and the radius, which is defined by its scale.
-            object_positions.append(_ObjectPosition(position=o_pos, radius=scale * 0.66))
+            object_positions.append(_ObjectPosition(position=o_pos, radius=scale))
 
             # Set random physics properties.
             mass = random.uniform(1, 5)
@@ -226,11 +226,12 @@ class PhysicsDataset(Controller):
                           "frequency": "always"}])
 
         # Write the static data to the disk.
-        f.create_dataset("object_ids", data=object_ids)
-        f.create_dataset("mass", data=masses)
-        f.create_dataset("static_friction", data=static_frictions)
-        f.create_dataset("dynamic_friction", data=dynamic_frictions)
-        f.create_dataset("bounciness", data=bouncinesses)
+        static_group = f.create_group("static")
+        static_group.create_dataset("object_ids", data=object_ids)
+        static_group.create_dataset("mass", data=masses)
+        static_group.create_dataset("static_friction", data=static_frictions)
+        static_group.create_dataset("dynamic_friction", data=dynamic_frictions)
+        static_group.create_dataset("bounciness", data=bouncinesses)
 
         # Send the commands and start the trial.
         resp = self.communicate(commands)
@@ -305,10 +306,8 @@ class PhysicsDataset(Controller):
 
         num_objects = len(object_ids)
 
-        frame = grp.create_group(str(frame_num))
+        frame = grp.create_group(TDWUtils.zero_padding(frame_num, 4))
         images = frame.create_group("images")
-        collisions = frame.create_group("collisions")
-        env_collisions = frame.create_group("env_collisions")
 
         # Transforms data.
         positions = np.empty(dtype=np.float32, shape=(num_objects, 3))
@@ -382,16 +381,18 @@ class PhysicsDataset(Controller):
                                                                                 en.get_contact_point(i)))
 
         # Write the data to disk.
-        frame.create_dataset("positions", data=positions.reshape(num_objects, 3), compression="gzip")
-        frame.create_dataset("forwards", data=forwards.reshape(num_objects, 3), compression="gzip")
-        frame.create_dataset("rotations", data=rotations.reshape(num_objects, 4), compression="gzip")
-        frame.create_dataset("velocities", data=velocities.reshape(num_objects, 3), compression="gzip")
-        frame.create_dataset("angular_velocities", data=angular_velocities.reshape(num_objects, 3),
-                             compression="gzip")
+        objs = frame.create_group("objects")
+        objs.create_dataset("positions", data=positions.reshape(num_objects, 3), compression="gzip")
+        objs.create_dataset("forwards", data=forwards.reshape(num_objects, 3), compression="gzip")
+        objs.create_dataset("rotations", data=rotations.reshape(num_objects, 4), compression="gzip")
+        objs.create_dataset("velocities", data=velocities.reshape(num_objects, 3), compression="gzip")
+        objs.create_dataset("angular_velocities", data=angular_velocities.reshape(num_objects, 3), compression="gzip")
+        collisions = frame.create_group("collisions")
         collisions.create_dataset("object_ids", data=collision_ids.reshape((-1, 2)), compression="gzip")
         collisions.create_dataset("relative_velocities", data=collision_relative_velocities.reshape((-1, 3)),
                                   compression="gzip")
         collisions.create_dataset("contacts", data=collision_contacts.reshape((-1, 2, 3)), compression="gzip")
+        env_collisions = frame.create_group("env_collisions")
         env_collisions.create_dataset("object_ids", data=env_collision_ids, compression="gzip")
         env_collisions.create_dataset("contacts", data=env_collision_contacts.reshape((-1, 2, 3)),
                                       compression="gzip")
