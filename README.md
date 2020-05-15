@@ -65,3 +65,5 @@ frames/    # Per-frame data.
   - `frames/collisions/object_ids` has the shape `(num_collisions, 2)` (tuple of IDs).
   - `frames/env_collisions/object_ids` has the shape `(num_collisions)` (only 1 ID per collision).
   - `frames/collisions/contacts` and `frames/env_collision/contacts` are tuples of `(normal, point)`, i.e. the shape is `(num_collisions, 2, 3)`.
+- All images are 256x256
+- The `_img` pass is a .jpg and all other passes are .png
