@@ -109,11 +109,11 @@ class PhysicsDataset(Controller):
         num_objects = random.choice([2, 3])
 
         # Static data for this trial.
-        object_ids = np.empty(dtype=np.int32, shape=(num_objects, 1))
-        masses = np.empty(dtype=np.float32, shape=(num_objects, 1))
-        static_frictions = np.empty(dtype=np.float32, shape=(num_objects, 1))
-        dynamic_frictions = np.empty(dtype=np.float32, shape=(num_objects, 1))
-        bouncinesses = np.empty(dtype=np.float32, shape=(num_objects, 1))
+        object_ids = np.empty(dtype=int, shape=(0, num_objects, 1))
+        masses = np.empty(dtype=np.float32, shape=(0, num_objects, 1))
+        static_frictions = np.empty(dtype=np.float32, shape=(0, num_objects, 1))
+        dynamic_frictions = np.empty(dtype=np.float32, shape=(0, num_objects, 1))
+        bouncinesses = np.empty(dtype=np.float32, shape=(0, num_objects, 1))
 
         # Randomize the order of the records and pick the first one.
         # This way, the objects are always different.
@@ -124,19 +124,19 @@ class PhysicsDataset(Controller):
         # Add 2-3 objects.
         for i in range(num_objects):
             o_id = Controller.get_unique_id()
-            record = self.records[0]
+            record = self.records[i]
 
             # This object is now using system memory.
             if record.name not in self.in_memory:
                 self.in_memory.append(record.name)
 
             # Set randomized physics values and update the physics info.
-            scale = TDWUtils.get_unit_scale(record) * random.uniform(0.3, 0.5)
+            scale = TDWUtils.get_unit_scale(record) * random.uniform(0.8, 1.1)
 
             # Get a random position.
             o_pos = self._get_object_position(object_positions=object_positions)
             # Add the object and the radius, which is defined by its scale.
-            object_positions.append(_ObjectPosition(position=o_pos, radius=scale / 2))
+            object_positions.append(_ObjectPosition(position=o_pos, radius=scale * 0.66))
 
             # Set random physics properties.
             mass = random.uniform(1, 5)
@@ -176,9 +176,9 @@ class PhysicsDataset(Controller):
                               "mode": "continuous_dynamic"}])
         # Get a random position for the avatar.
         # Offset the initial position of the avatar from the center of the room.
-        a_r = random.uniform(1.5, 2.3)
+        a_r = random.uniform(0.9, 1.5)
         a_x = a_r
-        a_y = random.uniform(1, 1.75)
+        a_y = random.uniform(0.5, 1.25)
         a_z = a_r
         theta = np.radians(random.uniform(0, 360))
         a_x = np.cos(theta) * a_x - np.sin(theta) * a_z
@@ -189,8 +189,8 @@ class PhysicsDataset(Controller):
         # Apply a force allow the forward directional vector.
         # Teleport the avatar and look at the object that will be hit. Then slightly rotate the camera randomly.
         # Listen for output data.
-        force_id = object_ids[0]
-        target_id = object_ids[1]
+        force_id = int(object_ids[0])
+        target_id = int(object_ids[1])
         commands.extend([{"$type": "object_look_at",
                           "other_object_id": target_id,
                           "id": force_id},
@@ -200,7 +200,7 @@ class PhysicsDataset(Controller):
                           "axis": "yaw",
                           "is_world": True},
                          {"$type": "apply_force_magnitude_to_object",
-                          "magnitude": random.uniform(20, 25),
+                          "magnitude": random.uniform(20, 60),
                           "id": force_id},
                          {"$type": "teleport_avatar_to",
                           "position": a_pos},
@@ -253,15 +253,16 @@ class PhysicsDataset(Controller):
         commands = []
         for o_id in object_ids:
             commands.append({"$type": "destroy_object",
-                             "id": o_id})
+                             "id": int(o_id)})
         # Unload asset bundles to conserve memory.
         if len(self.in_memory) >= 100:
             commands.append({"$type": "unload_asset_bundles"})
             del self.in_memory[:]
         self.communicate(commands)
+        f.close()
 
     @staticmethod
-    def _get_object_position(object_positions: List[_ObjectPosition], max_tries: int = 1000, radius: float = 1.5) -> \
+    def _get_object_position(object_positions: List[_ObjectPosition], max_tries: int = 1000, radius: float = 2) -> \
             Dict[str, float]:
         """
         Try to get a valid random position that doesn't interpentrate with other objects.
