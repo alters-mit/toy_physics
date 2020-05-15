@@ -6,7 +6,7 @@ from typing import List, Dict
 from tdw.controller import Controller
 from tdw.tdw_utils import TDWUtils
 from tdw.librarian import ModelLibrarian
-from tdw.output_data import OutputData, Transforms, Rigidbodies, Collision, EnvironmentCollision, Images
+from tdw.output_data import OutputData, Transforms, Rigidbodies, Collision, EnvironmentCollision, Images, CameraMatrices
 import numpy as np
 
 
@@ -37,18 +37,25 @@ class PhysicsDataset(Controller):
 
         super().__init__(port=port)
 
-    def run(self, num: int, output_dir: str) -> None:
+    def run(self, num: int, output_dir: str, temp_path: str) -> None:
         """
         Create the dataset.
 
         :param num: The number of trials in the dataset.
         :param output_dir: The root output directory.
+        :param temp_path: Temporary path to a file being written.
         """
 
         pbar = tqdm(total=num)
         output_dir = Path(output_dir)
         if not output_dir.exists():
             output_dir.mkdir(parents=True)
+        temp_path = Path(temp_path)
+        if not temp_path.parent.exists():
+            temp_path.parent.mkdir(parents=True)
+        # Remove an incomplete temp path.
+        if temp_path.exists():
+            temp_path.unlink()
 
         # Initialize the scene.
         self.communicate([{"$type": "set_screen_size",
@@ -96,21 +103,22 @@ class PhysicsDataset(Controller):
                     filepath.unlink()
             if not filepath.exists():
                 # Do the trial.
-                self.trial(filepath=filepath)
+                self.trial(filepath=filepath, temp_path=temp_path)
             pbar.update(1)
         pbar.close()
         self.communicate({"$type": "terminate"})
 
-    def trial(self, filepath: Path) -> None:
+    def trial(self, filepath: Path, temp_path: Path) -> None:
         """
         Create 2-3 objects. Set random physics parameters, camera position, etc.
         Apply a force to one object, directed at another.
         Per frame, write object and image data to disk.
 
         :param filepath: The path to this trial's hdf5 file.
+        :param temp_path: The path to the temporary file.
         """
         # Start a new file.
-        f = h5py.File(str(filepath.resolve()), "a")
+        f = h5py.File(str(temp_path.resolve()), "a")
 
         # Positions where objects will be placed (used to prevent interpenetration).
         object_positions: List[_ObjectPosition] = []
@@ -228,7 +236,8 @@ class PhysicsDataset(Controller):
                           "stay": False,
                           "collision_types": ["obj", "env"]},
                          {"$type": "send_rigidbodies",
-                          "frequency": "always"}])
+                          "frequency": "always"},
+                         {"$type": "send_camera_matrices"}])
 
         # Write the static data to the disk.
         static_group = f.create_group("static")
@@ -240,6 +249,13 @@ class PhysicsDataset(Controller):
 
         # Send the commands and start the trial.
         resp = self.communicate(commands)
+        # Add the camera matrices.
+        for r in resp[:-1]:
+            if OutputData.get_data_type_id(r) == "cama":
+                matrices = CameraMatrices(r)
+                static_group.create_dataset("projection_matrix", matrices.get_projection_matrix())
+                static_group.create_dataset("camera_matrix", matrices.get_camera_matrix())
+
         frame = 0
 
         frames_grp = f.create_group("frames")
@@ -262,6 +278,8 @@ class PhysicsDataset(Controller):
                              "id": int(o_id)})
         self.communicate(commands)
         f.close()
+        # Move the file.
+        temp_path.replace(filepath)
 
     @staticmethod
     def _get_object_position(object_positions: List[_ObjectPosition], max_tries: int = 1000, radius: float = 2) -> \
@@ -405,7 +423,8 @@ if __name__ == "__main__":
     parser = ArgumentParser()
     parser.add_argument("--dir", type=str, default="D:/physics_dataset", help="Root output directory.")
     parser.add_argument("--num", type=int, default=3000, help="The number of trials in the dataset.")
+    parser.add_argument("--temp", type=str, default="D:/temp.hdf5", help="Temp path for incomplete files.")
 
     args = parser.parse_args()
     p = PhysicsDataset()
-    p.run(num=args.num, output_dir=args.dir)
+    p.run(num=args.num, output_dir=args.dir, temp_path=args.temp)

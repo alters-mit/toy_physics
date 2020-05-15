@@ -8,10 +8,11 @@ Generate a dataset of "toys" colliding with each other.
 python3 physics_dataset.py [ARGUMENTS]
 ```
 
-| Argument | Type | Default            | Description            |
-| -------- | ---- | ------------------ | ---------------------- |
-| `--dir`  | str  | D:/physics_dataset | Root output directory. |
-| `--num`  | int  | 3000               | Number of trials.      |
+| Argument | Type | Default            | Description                              |
+| -------- | ---- | ------------------ | ---------------------------------------- |
+| `--dir`  | str  | D:/physics_dataset | Root output directory.                   |
+| `--temp` | str  | D:/temp.hdf5       | Temp file location for incomplete files. |
+| `--num`  | int  | 3000               | Number of trials.                        |
 
 ## Output
 
@@ -32,6 +33,8 @@ static/    # Data that doesn't change per frame.
 ....static_friction
 ....dynamic_friction
 ....bounciness
+....camera_matrix
+....project_matrix
 frames/    # Per-frame data.
 ....0000/    # The frame number.
 ........images/    # Each image pass.
