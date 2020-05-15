@@ -84,7 +84,7 @@ class PhysicsDataset(Controller):
                            "frequency": "always"}])
 
         for i in range(num):
-            filepath = output_dir.joinpath(str(i) + ".hdf5")
+            filepath = output_dir.joinpath(TDWUtils.zero_padding(i, 4) + ".hdf5")
             # If the file already exists, check to see if it is corrupted. If it is, remove the file.
             # If it is ok, assume that the dataset was completed, and skip it.
             if filepath.exists():
