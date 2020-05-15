@@ -26,12 +26,14 @@ class _ObjectPosition:
 
 
 class PhysicsDataset(Controller):
+    """
+    Per trial, create 2-3 "toys". Apply a force to one of them, directed at another.
+    Per frame, save object/physics metadata and image data.
+    """
+
     def __init__(self, port: int = 1071):
         lib = ModelLibrarian(str(Path("toys.json").resolve()))
         self.records = lib.records
-
-        # The unique names of models currently in memory; use this to manage memory usage.
-        self.in_memory: List[str] = []
 
         super().__init__(port=port)
 
@@ -100,6 +102,13 @@ class PhysicsDataset(Controller):
         self.communicate({"$type": "terminate"})
 
     def trial(self, filepath: Path) -> None:
+        """
+        Create 2-3 objects. Set random physics parameters, camera position, etc.
+        Apply a force to one object, directed at another.
+        Per frame, write object and image data to disk.
+
+        :param filepath: The path to this trial's hdf5 file.
+        """
         # Start a new file.
         f = h5py.File(str(filepath.resolve()), "a")
 
@@ -125,10 +134,6 @@ class PhysicsDataset(Controller):
         for i in range(num_objects):
             o_id = Controller.get_unique_id()
             record = self.records[i]
-
-            # This object is now using system memory.
-            if record.name not in self.in_memory:
-                self.in_memory.append(record.name)
 
             # Set randomized physics values and update the physics info.
             scale = TDWUtils.get_unit_scale(record) * random.uniform(0.8, 1.1)
@@ -255,10 +260,6 @@ class PhysicsDataset(Controller):
         for o_id in object_ids:
             commands.append({"$type": "destroy_object",
                              "id": int(o_id)})
-        # Unload asset bundles to conserve memory.
-        if len(self.in_memory) >= 100:
-            commands.append({"$type": "unload_asset_bundles"})
-            del self.in_memory[:]
         self.communicate(commands)
         f.close()
 
