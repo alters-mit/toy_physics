@@ -92,23 +92,21 @@ class PhysicsDataset(Controller):
                           {"$type": "send_images",
                            "frequency": "always"}])
 
-        for i in range(num):
+        max_num = 0
+        for f in output_dir.glob("*.hdf5"):
+            if int(f.stem) > max_num:
+                max_num = int(f.stem)
+        pbar.update(max_num)
+        for i in range(max_num + 1, num):
             filepath = output_dir.joinpath(TDWUtils.zero_padding(i, 4) + ".hdf5")
-            # If the file already exists, check to see if it is corrupted. If it is, remove the file.
-            # If it is ok, assume that the dataset was completed, and skip it.
-            if filepath.exists():
-                try:
-                    h5py.File(str(filepath.resolve()), "r")
-                except OSError:
-                    filepath.unlink()
             if not filepath.exists():
                 # Do the trial.
-                self.trial(filepath=filepath, temp_path=temp_path)
+                self.trial(filepath=filepath, temp_path=temp_path, trial_num=i)
             pbar.update(1)
         pbar.close()
         self.communicate({"$type": "terminate"})
 
-    def trial(self, filepath: Path, temp_path: Path) -> None:
+    def trial(self, filepath: Path, temp_path: Path, trial_num: int) -> None:
         """
         Create 2-3 objects. Set random physics parameters, camera position, etc.
         Apply a force to one object, directed at another.
@@ -116,7 +114,9 @@ class PhysicsDataset(Controller):
 
         :param filepath: The path to this trial's hdf5 file.
         :param temp_path: The path to the temporary file.
+        :param trial_num: The number of the current trial.
         """
+
         # Start a new file.
         f = h5py.File(str(temp_path.resolve()), "a")
 
@@ -238,6 +238,10 @@ class PhysicsDataset(Controller):
                          {"$type": "send_rigidbodies",
                           "frequency": "always"},
                          {"$type": "send_camera_matrices"}])
+
+        # Remove asset bundles (to prevent a memory leak).
+        if trial_num % 300 == 0:
+            commands.append({"$type": "unload_asset_bundles"})
 
         # Write the static data to the disk.
         static_group = f.create_group("static")
