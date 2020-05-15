@@ -1,4 +1,4 @@
-# tdw_physics
+# toy_physics
 
 Generate a dataset of "toys" colliding with each other.
 
