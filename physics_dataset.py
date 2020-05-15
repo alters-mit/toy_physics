@@ -253,8 +253,9 @@ class PhysicsDataset(Controller):
         for r in resp[:-1]:
             if OutputData.get_data_type_id(r) == "cama":
                 matrices = CameraMatrices(r)
-                static_group.create_dataset("projection_matrix", matrices.get_projection_matrix())
-                static_group.create_dataset("camera_matrix", matrices.get_camera_matrix())
+                print(matrices.get_projection_matrix())
+                static_group.create_dataset("projection_matrix", data=matrices.get_projection_matrix())
+                static_group.create_dataset("camera_matrix", data=matrices.get_camera_matrix())
 
         frame = 0
 
