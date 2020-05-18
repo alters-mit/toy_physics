@@ -137,6 +137,9 @@ class PhysicsDataset(Controller):
         random.shuffle(self.records)
 
         commands = []
+        # Remove asset bundles (to prevent a memory leak).
+        if trial_num % 100 == 0:
+            commands.append({"$type": "unload_asset_bundles"})
 
         # Add 2-3 objects.
         for i in range(num_objects):
@@ -238,10 +241,6 @@ class PhysicsDataset(Controller):
                          {"$type": "send_rigidbodies",
                           "frequency": "always"},
                          {"$type": "send_camera_matrices"}])
-
-        # Remove asset bundles (to prevent a memory leak).
-        if trial_num % 300 == 0:
-            commands.append({"$type": "unload_asset_bundles"})
 
         # Write the static data to the disk.
         static_group = f.create_group("static")
