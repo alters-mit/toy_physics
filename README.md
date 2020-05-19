@@ -5,6 +5,7 @@ Generate a dataset of "toys" colliding with each other.
 ## Requirements
 
 - TDW
+  - Access to `models_full.json`
 - Python 3.6+
 - [tdw_physics](https://github.com/alters-mit/tdw_physics)
 
