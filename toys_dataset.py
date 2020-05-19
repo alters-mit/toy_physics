@@ -5,11 +5,11 @@ from typing import List, Dict
 from tdw.controller import Controller
 from tdw.tdw_utils import TDWUtils
 from tdw.librarian import ModelLibrarian
-from tdw_physics.rigidbody_dataset import RigidbodyDataset
+from tdw_physics.rigidbodies_dataset import RigidbodiesDataset
 from tdw_physics.object_position import ObjectPosition
 
 
-class ToysDataset(RigidbodyDataset):
+class ToysDataset(RigidbodiesDataset):
     """
     Per trial, create 2-3 "toys". Apply a force to one of them, directed at another.
     Per frame, save object/physics metadata and image data.
@@ -22,10 +22,10 @@ class ToysDataset(RigidbodyDataset):
 
         super().__init__(port=port)
 
-    def _get_field_of_view(self) -> float:
+    def get_field_of_view(self) -> float:
         return 55
 
-    def _get_scene_initialization_commands(self) -> List[dict]:
+    def get_scene_initialization_commands(self) -> List[dict]:
         return [self.get_add_scene(scene_name="box_room_2018"),
                 {"$type": "set_aperture",
                  "aperture": 4.8},
@@ -38,7 +38,7 @@ class ToysDataset(RigidbodyDataset):
                 {"$type": "set_ambient_occlusion_thickness_modifier",
                  "thickness": 3.5}]
 
-    def _get_trial_initialization_commands(self) -> List[dict]:
+    def get_trial_initialization_commands(self) -> List[dict]:
         num_objects = random.choice([2, 3])
         # Positions where objects will be placed (used to prevent interpenetration).
         object_positions: List[ObjectPosition] = []
@@ -94,8 +94,8 @@ class ToysDataset(RigidbodyDataset):
                           "magnitude": random.uniform(20, 60),
                           "id": force_id},
                          {"$type": "teleport_avatar_to",
-                          "position": self._get_random_avatar_position(radius_min=0.9, radius_max=1.5, y_min=0.5,
-                                                                       y_max=1.25, center=TDWUtils.VECTOR3_ZERO)},
+                          "position": self.get_random_avatar_position(radius_min=0.9, radius_max=1.5, y_min=0.5,
+                                                                      y_max=1.25, center=TDWUtils.VECTOR3_ZERO)},
                          {"$type": "look_at",
                           "object_id": self._target_id,
                           "use_centroid": True},
@@ -110,7 +110,7 @@ class ToysDataset(RigidbodyDataset):
 
         return commands
 
-    def _get_per_frame_commands(self, frame: int) -> List[dict]:
+    def get_per_frame_commands(self, resp: List[bytes]) -> List[dict]:
         return [{"$type": "focus_on_object",
                  "object_id": self._target_id}]
 
