@@ -1,18 +1,15 @@
 from pathlib import Path
 import random
 import numpy as np
-import h5py
 from typing import List, Dict
 from tdw.controller import Controller
 from tdw.tdw_utils import TDWUtils
 from tdw.librarian import ModelLibrarian
-from tdw_physics.physics_dataset import PhysicsDataset
-from tdw_physics.trial_writers.rigidbody_writer import RigidbodyWriter
-from tdw_physics.trial_writers.trial_writer import TrialWriter
+from tdw_physics.rigidbody_dataset import RigidbodyDataset
 from tdw_physics.object_position import ObjectPosition
 
 
-class ToysDataset(PhysicsDataset):
+class ToysDataset(RigidbodyDataset):
     """
     Per trial, create 2-3 "toys". Apply a force to one of them, directed at another.
     Per frame, save object/physics metadata and image data.
@@ -24,9 +21,6 @@ class ToysDataset(PhysicsDataset):
         self._target_id: int = 0
 
         super().__init__(port=port)
-
-    def _get_writer(self, f: h5py.File) -> TrialWriter:
-        return RigidbodyWriter(f)
 
     def _get_field_of_view(self) -> float:
         return 55
@@ -44,7 +38,7 @@ class ToysDataset(PhysicsDataset):
                 {"$type": "set_ambient_occlusion_thickness_modifier",
                  "thickness": 3.5}]
 
-    def _get_trial_initialization_commands(self, writer: RigidbodyWriter) -> List[dict]:
+    def _get_trial_initialization_commands(self) -> List[dict]:
         num_objects = random.choice([2, 3])
         # Positions where objects will be placed (used to prevent interpenetration).
         object_positions: List[ObjectPosition] = []
@@ -68,14 +62,15 @@ class ToysDataset(PhysicsDataset):
             # Add the object and the radius, which is defined by its scale.
             object_positions.append(ObjectPosition(position=o_pos, radius=scale))
 
-            commands.extend(writer.add_object(o_id=o_id,
-                                              record=self.records[i],
-                                              position=self._get_object_position(object_positions=object_positions),
-                                              rotation={"x": 0, "y": random.uniform(-90, 90), "z": 0},
-                                              mass=random.uniform(1, 5),
-                                              dynamic_friction=random.uniform(0, 0.9),
-                                              static_friction=random.uniform(0, 0.9),
-                                              bounciness=random.uniform(0, 1)))
+            commands.extend(self.add_physics_object(o_id=o_id,
+                                                    record=self.records[i],
+                                                    position=self._get_object_position(
+                                                        object_positions=object_positions),
+                                                    rotation={"x": 0, "y": random.uniform(-90, 90), "z": 0},
+                                                    mass=random.uniform(1, 5),
+                                                    dynamic_friction=random.uniform(0, 0.9),
+                                                    static_friction=random.uniform(0, 0.9),
+                                                    bounciness=random.uniform(0, 1)))
             # Scale the object.
             commands.append({"$type": "scale_object",
                              "id": o_id,
@@ -85,8 +80,8 @@ class ToysDataset(PhysicsDataset):
         # Apply a force allow the forward directional vector.
         # Teleport the avatar and look at the object that will be hit. Then slightly rotate the camera randomly.
         # Listen for output data.
-        force_id = int(writer.object_ids[0])
-        self._target_id = int(writer.object_ids[1])
+        force_id = int(self.object_ids[0])
+        self._target_id = int(self.object_ids[1])
         commands.extend([{"$type": "object_look_at",
                           "other_object_id": self._target_id,
                           "id": force_id},
