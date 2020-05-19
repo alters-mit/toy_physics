@@ -115,7 +115,7 @@ class ToysDataset(PhysicsDataset):
 
         return commands
 
-    def _get_per_frame_commands(self) -> List[dict]:
+    def _get_per_frame_commands(self, frame: int) -> List[dict]:
         return [{"$type": "focus_on_object",
                  "object_id": self._target_id}]
 
