@@ -114,6 +114,9 @@ class ToysDataset(RigidbodiesDataset):
         return [{"$type": "focus_on_object",
                  "object_id": self._target_id}]
 
+    def is_done(self, resp: List[bytes], frame: int) -> bool:
+        return frame > 1000
+
     @staticmethod
     def _get_object_position(object_positions: List[ObjectPosition], max_tries: int = 1000, radius: float = 2) -> \
             Dict[str, float]:
